@@ -1,0 +1,27 @@
+#FORMAT OF THE LOG
+# MM = MONTH
+# DD = DAY
+# YY = YEAR
+# HM = HOUR
+# MM = MINUTE
+# SS = SECOND
+# %LOG% = COMMAND LOGGED
+UseCustom:
+  - a
+DEFAULT:
+
+   LogFormat:
+   - \[%d/%m/%Y | %H:%M:%S]\
+   LOG:
+   - "{1} triggered the command {2}."
+   AfkMessage:
+   - "{1} is not here right now. Please try again later."
+   LOGIT:
+     - False
+   ERROR:
+     - "Error Happend when {1} tried to execute the command {2}."
+   MutedRoleID:
+     - 768147580118499410
+   Token:
+     
+CUSTOM:

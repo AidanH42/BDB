@@ -1,2 +1,2 @@
-# BDB
-Basic Discord Bot (Moderation)
+# B.D.B
+ Basic discord bot (moderation)
