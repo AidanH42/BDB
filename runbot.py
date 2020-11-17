@@ -1,6 +1,7 @@
 import asyncio
-
+import psutil
 import json
+import platform
 import time
 import yaml
 import discord
@@ -322,4 +323,109 @@ async def commands(ctx):
                                        "{reason}",inline=True)
     embed.add_field(name="$warnings",value="Displays the warnings of a member.\nUsage = $warnings {player}",inline=True)
     await ctx.send(embed=embed)
-bot.run(token)
+@bot.command()
+@has_permissions(administrator=True)
+async def getServer(ctx):
+    def get_size(bytes, suffix="B"):
+        """
+        Scale bytes to its proper format
+        e.g:
+            1253656 => '1.20MB'
+            1253656678 => '1.17GB'
+        """
+        factor = 1024
+        for unit in ["", "K", "M", "G", "T", "P"]:
+            if bytes < factor:
+                return f"{bytes:.2f}{unit}{suffix}"
+            bytes /= factor
+
+    await ctx.send(str("=" * 10 +  "System Information"+  "=" * 10))
+    uname = platform.uname()
+    await ctx.send(str(f"System: {uname.system}"))
+    await ctx.send(str(f"Node Name: {uname.node}"))
+    await ctx.send(str(f"Release: {uname.release}"))
+    await ctx.send(str(f"Version: {uname.version}"))
+    await ctx.send(str(f"Machine: {uname.machine}"))
+    await ctx.send(str(f"Processor: {uname.processor}"))
+    # Boot Time
+    await ctx.send(str("=" * 10+  "Boot Time"+  "=" * 10))
+    boot_time_timestamp = psutil.boot_time()
+    bt = datetime.fromtimestamp(boot_time_timestamp)
+    await ctx.send(str(f"Boot Time: {bt.year}/{bt.month}/{bt.day} {bt.hour}:{bt.minute}:{bt.second}"))
+    # let's print CPU information
+    await ctx.send(str("=" * 10+  "CPU Info"+  "=" * 10))
+    # number of cores
+    await ctx.send(str("Physical cores:"+  str(psutil.cpu_count(logical=False))))
+    await ctx.send(str("Total cores:"+  str(psutil.cpu_count(logical=True))))
+    # CPU frequencies
+    cpufreq = psutil.cpu_freq()
+    await ctx.send(str(f"Max Frequency: {cpufreq.max:.2f}Mhz"))
+    await ctx.send(str(f"Min Frequency: {cpufreq.min:.2f}Mhz"))
+    await ctx.send(str(f"Current Frequency: {cpufreq.current:.2}Mhz"))
+    # CPU usage
+    await ctx.send(str("CPU Usage Per Core:"))
+    for i, percentage in enumerate(psutil.cpu_percent(percpu=True, interval=1)):
+        await ctx.send(str(f"Core {i}: {percentage}%"))
+    await ctx.send(str(f"Total CPU Usage: {psutil.cpu_percent()}%"))
+    # Memory Information
+    await ctx.send(str("=" * 10+  "Memory Information"+  "=" * 10))
+    # get the memory details
+    svmem = psutil.virtual_memory()
+    await ctx.send(str(f"Total: {get_size(svmem.total)}"))
+    await ctx.send(str(f"Available: {get_size(svmem.available)}"))
+    await ctx.send(str(f"Used: {get_size(svmem.used)}"))
+    await ctx.send(str(f"Percentage: {svmem.percent}%"))
+    await ctx.send(str("=" * 20+  "SWAP"+  "=" * 20))
+    # get the swap memory details (if exists)
+    swap = psutil.swap_memory()
+    await ctx.send(str(f"Total: {get_size(swap.total)}"))
+    await ctx.send(str(f"Free: {get_size(swap.free)}"))
+    await ctx.send(str(f"Used: {get_size(swap.used)}"))
+    await ctx.send(str(f"Percentage: {swap.percent}%"))
+    # Disk Information
+    await ctx.send(str("=" * 10+  "Disk Information"+  "=" * 10))
+    await ctx.send(str("Partitions and Usage:"))
+    # get all disk partitions
+    partitions = psutil.disk_partitions()
+    for partition in partitions:
+        await ctx.send(str(f"=== Device: {partition.device} ==="))
+        await ctx.send(str(f"  Mountpoint: {partition.mountpoint}"))
+        await ctx.send(str(f"  File system type: {partition.fstype}"))
+        try:
+            partition_usage = psutil.disk_usage(partition.mountpoint)
+        except PermissionError:
+            # this can be catched due to the disk that
+            # isn't ready
+            continue
+        await ctx.send(str(f"  Total Size: {get_size(partition_usage.total)}"))
+        await ctx.send(str(f"  Used: {get_size(partition_usage.used)}"))
+        await ctx.send(str(f"  Free: {get_size(partition_usage.free)}"))
+        await ctx.send(str(f"  Percentage: {partition_usage.percent}%"))
+    # get IO statistics since boot
+    disk_io = psutil.disk_io_counters()
+    await ctx.send(str(f"Total read: {get_size(disk_io.read_bytes)}"))
+    await ctx.send(str(f"Total write: {get_size(disk_io.write_bytes)}"))
+    # Network information
+    await ctx.send(str("=" * 10+  "Network Information"+  "=" * 10))
+    # get all network interfaces (virtual and physical)
+    if_addrs = psutil.net_if_addrs()
+    for interface_name, interface_addresses in if_addrs.items():
+        for address in interface_addresses:
+            await ctx.send(str(f"=== Interface: {interface_name} ==="))
+            if str(address.family) == 'AddressFamily.AF_INET':
+                await ctx.send(str(f"  IP Address: {address.address}"))
+                await ctx.send(str(f"  Netmask: {address.netmask}"))
+                await ctx.send(str(f"  Broadcast IP: {address.broadcast}"))
+            elif str(address.family) == 'AddressFamily.AF_PACKET':
+                await ctx.send(str(f"  MAC Address: {address.address}"))
+                await ctx.send(str(f"  Netmask: {address.netmask}"))
+                await ctx.send(str(f"  Broadcast MAC: {address.broadcast}"))
+    # get IO statistics since boot
+    net_io = psutil.net_io_counters()
+    await ctx.send(str(f"Total Bytes Sent: {get_size(net_io.bytes_sent)}"))
+    await ctx.send(str(f"Total Bytes Received: {get_size(net_io.bytes_recv)}"))
+    await ctx.send("DONE!")
+    infolog(ctx)
+Token = Token.replace("['","")
+Token = Token.replace("']","")
+bot.run(Token)
